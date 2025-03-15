@@ -1,0 +1,264 @@
+{{define "node"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Node Status</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            line-height: 1.5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .node-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .node-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .status-online {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .status-offline {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .status-syncing {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-box {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .stat-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .peers-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .peers-table th, .peers-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .peers-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .block-progress {
+            height: 8px;
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .block-progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            background-color: #0d6efd;
+        }
+        .pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background-color: #e9ecef;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="node-card">
+            <div class="header">
+                <h1>{{ .NodeID }}</h1>
+                {{if eq .Status "online"}}
+                <span class="node-status status-online">Online</span>
+                {{else if eq .Status "offline"}}
+                <span class="node-status status-offline">Offline</span>
+                {{else if eq .Status "syncing"}}
+                <span class="node-status status-syncing">Syncing</span>
+                {{end}}
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-title">Current Block</div>
+                    <div class="stat-value">{{ .CurrentHeight }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Highest Block</div>
+                    <div class="stat-value">{{ .HighestBlock }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">P2P Listen Address</div>
+                    <div class="stat-value">{{ .P2PListenAddress }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">GRPC Listen Address</div>
+                    <div class="stat-value">{{ .GrpcListenAddress }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">RPC Listen Address</div>
+                    <div class="stat-value">{{ .RpcListenAddress }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Connected Peers</div>
+                    <div class="stat-value">{{ .PeerCount }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Pending Transactions</div>
+                    <div class="stat-value">{{ .PendingTxCount }}</div>
+                </div>
+            </div>
+
+            {{if eq .Status "syncing"}}
+            <div class="stat-box">
+                <div class="stat-title">Syncing Progress</div>
+                <div class="stat-value">{{ .SyncPercentage }}%</div>
+                <div class="block-progress">
+                    <div class="block-progress-bar" style="width: {{ .SyncPercentage }}%;"></div>
+                </div>
+            </div>
+            {{end}}
+
+            <h2>Node Information</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-title">Node Version</div>
+                    <div class="stat-value">{{ .Version }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Network</div>
+                    <div class="stat-value">{{ .Network }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Uptime</div>
+                    <div class="stat-value">{{ .Uptime }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Gas Price (Gwei)</div>
+                    <div class="stat-value">{{ .GasPrice }}</div>
+                </div>
+            </div>
+
+            <h2>Connected Peers</h2>
+            {{if gt .PeerCount 0}}
+            <table class="peers-table">
+                <thead>
+                    <tr>
+                        <th>Peer ID</th>
+                        <th>IP Address</th>
+                        <th>Client</th>
+                        <th>Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Peers}}
+                    <tr>
+                        <td>{{.ID}}</td>
+                        <td>{{.IP}}</td>
+                        <td>{{.Client}}</td>
+                        <td>{{.Latency}} ms</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            {{else}}
+            <p>No peers connected at this time.</p>
+            {{end}}
+
+            <h2>Latest Blocks</h2>
+            <table class="peers-table">
+                <thead>
+                    <tr>
+                        <th>Block #</th>
+                        <th>Hash</th>
+                        <th>Time</th>
+                        <th>Tx Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .LatestBlocks}}
+                    <tr>
+                        <td>{{.Number}}</td>
+                        <td>{{.Hash}}</td>
+                        <td>{{.Time}}</td>
+                        <td>{{.TxCount}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+
+            <h2>Node Configuration</h2>
+            <div class="node-card">
+                <div class="stat-box">
+                    <div class="stat-title">Consensus</div>
+                    <div>{{.Config.Consensus}}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Sync Mode</div>
+                    <div>{{.Config.SyncMode}}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Features</div>
+                    <div>
+                        {{range .Config.Features}}
+                        <span class="pill">{{.}}</span>
+                        {{end}}
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">P2P Port</div>
+                    <div>{{.Config.P2PPort}}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">RPC Port</div>
+                    <div>{{.Config.RPCPort}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+{{end}}
