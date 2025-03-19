@@ -3,31 +3,25 @@
 # Clear existing configuration
 rm -rf ./node*
 
-# Create directory for each node
+# Create directories for each node
 mkdir -p node0 node1 node2 node3
 
-echo "Created directory for the nodes"
+echo "Created directories for the nodes"
 
-# Initialize nodes
-echo "Initializing nodes..."
-
+# Initialize nodes using cometbft locally
 cometbft init --home=./node0
-# Set moniker for node0
 sed -i.bak 's/^moniker = ".*"/moniker = "node0"/' node0/config/config.toml
 echo "Node 0 initialized with moniker 'node0'"
 
 cometbft init --home=./node1
-# Set moniker for node1
 sed -i.bak 's/^moniker = ".*"/moniker = "node1"/' node1/config/config.toml
 echo "Node 1 initialized with moniker 'node1'"
 
 cometbft init --home=./node2
-# Set moniker for node2
 sed -i.bak 's/^moniker = ".*"/moniker = "node2"/' node2/config/config.toml
 echo "Node 2 initialized with moniker 'node2'"
 
 cometbft init --home=./node3
-# Set moniker for node3
 sed -i.bak 's/^moniker = ".*"/moniker = "node3"/' node3/config/config.toml
 echo "Node 3 initialized with moniker 'node3'"
 
@@ -77,25 +71,16 @@ echo "Node1 ID: $NODE1_ID"
 echo "Node2 ID: $NODE2_ID"
 echo "Node3 ID: $NODE3_ID"
 
-# Configure persistent peers for each node - FULL MESH CONFIGURATION
-echo "Configuring full mesh peer connections..."
+# Configure persistent peers - use docker container names for networking
+echo "Configuring full mesh peer connections for Docker environment..."
 
-# Node 0 connects to Nodes 1, 2, and 3
-sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE1_ID@127.0.0.1:9002,$NODE2_ID@127.0.0.1:9004,$NODE3_ID@127.0.0.1:9006\"/" node0/config/config.toml
+# Using container names for networking
+sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE1_ID@cometbft-node1:9002,$NODE2_ID@cometbft-node2:9004,$NODE3_ID@cometbft-node3:9006\"/" node0/config/config.toml
+sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@cometbft-node0:9000,$NODE2_ID@cometbft-node2:9004,$NODE3_ID@cometbft-node3:9006\"/" node1/config/config.toml
+sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@cometbft-node0:9000,$NODE1_ID@cometbft-node1:9002,$NODE3_ID@cometbft-node3:9006\"/" node2/config/config.toml
+sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@cometbft-node0:9000,$NODE1_ID@cometbft-node1:9002,$NODE2_ID@cometbft-node2:9004\"/" node3/config/config.toml
 
-# Node 1 connects to Nodes 0, 2, and 3
-sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@127.0.0.1:9000,$NODE2_ID@127.0.0.1:9004,$NODE3_ID@127.0.0.1:9006\"/" node1/config/config.toml
-
-# Node 2 connects to Nodes 0, 1, and 3
-sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@127.0.0.1:9000,$NODE1_ID@127.0.0.1:9002,$NODE3_ID@127.0.0.1:9006\"/" node2/config/config.toml
-
-# Node 3 connects to Nodes 0, 1, and 2
-sed -i.bak "s/^persistent_peers = \"\"/persistent_peers = \"$NODE0_ID@127.0.0.1:9000,$NODE1_ID@127.0.0.1:9002,$NODE2_ID@127.0.0.1:9004\"/" node3/config/config.toml
-
-# We can optionally set unconditional_peer_ids for more robust connections if needed
-# sed -i.bak "s/^unconditional_peer_ids = \"\"/unconditional_peer_ids = \"$NODE0_ID,$NODE1_ID,$NODE2_ID\"/" node3/config/config.toml
-
-echo "Full mesh peer connections configured for all nodes"
+echo "Full mesh peer connections configured for all nodes in Docker environment"
 
 # Configure each node for local development
 for node in node0 node1 node2 node3; do
@@ -105,22 +90,29 @@ for node in node0 node1 node2 node3; do
   # Allow CORS for web server access
   sed -i.bak 's/^cors_allowed_origins = \[\]/cors_allowed_origins = ["*"]/' $node/config/config.toml
   
+  # Set database backend to goleveldb
+  if grep -q "db_backend" $node/config/config.toml; then
+    sed -i.bak 's/^db_backend = ".*"/db_backend = "goleveldb"/' $node/config/config.toml
+  else
+    echo 'db_backend = "goleveldb"' >> $node/config/config.toml
+  fi
+  
   echo "Local development settings configured for $node"
 done
 
-# Display startup instructions
 echo ""
-echo "==== Network Setup Complete ===="
+echo "==== Docker Setup Complete ===="
 echo ""
-echo "Build the go source code: go build -o ./build"
+echo "Run the following commands to start the network:"
+echo "1. docker-compose up -d"
 echo ""
-echo "To start the nodes with web servers, run these commands in separate terminals:"
-echo "Node 0: ./build/DeWS-Replica --cmt-home=./node0 --http-port 5000"
-echo "Node 1: ./build/DeWS-Replica --cmt-home=./node1 --http-port 5001"
-echo "Node 2: ./build/DeWS-Replica --cmt-home=./node2 --http-port 5002"
-echo "Node 3: ./build/DeWS-Replica --cmt-home=./node3 --http-port 5003"
+echo "To check logs:"
+echo "docker logs cometbft-node0"
+echo "docker logs cometbft-node1"
+echo "docker logs cometbft-node2"
+echo "docker logs cometbft-node3"
 echo ""
-echo "To check if nodes are connected:"
+echo "To access the nodes:"
 echo "Node 0: http://localhost:5000"
 echo "Node 1: http://localhost:5001"
 echo "Node 2: http://localhost:5002"
