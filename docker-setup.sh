@@ -42,22 +42,33 @@ sed -i.bak 's/^laddr = "tcp:\/\/0.0.0.0:26656"/laddr = "tcp:\/\/0.0.0.0:9006"/' 
 sed -i.bak 's/^laddr = "tcp:\/\/127.0.0.1:26657"/laddr = "tcp:\/\/0.0.0.0:9007"/' node3/config/config.toml
 echo "Node 3 configured to use P2P port 9006 and RPC port 9007"
 
-# Get validator info from node0 and node1
+# Get validator info
 echo "Extracting validator info from node0 and node1"
 NODE0_VALIDATOR=$(cat node0/config/genesis.json | jq '.validators[0]')
 NODE1_PUBKEY=$(cat node1/config/priv_validator_key.json | jq -r '.pub_key.value')
+NODE2_PUBKEY=$(cat node2/config/priv_validator_key.json | jq -r '.pub_key.value')
+NODE3_PUBKEY=$(cat node3/config/priv_validator_key.json | jq -r '.pub_key.value')
 
 # Create updated genesis with both validators
 echo "Adding node1 as a validator to genesis file"
 cat node0/config/genesis.json | jq --arg pubkey "$NODE1_PUBKEY" '.validators += [{"address":"","pub_key":{"type":"tendermint/PubKeyEd25519","value":$pubkey},"power":"10","name":"node1"}]' > updated_genesis.json
 
-# Copy updated genesis to all nodes
-echo "Sharing updated genesis file to all nodes"
-cp updated_genesis.json node0/config/genesis.json
-cp updated_genesis.json node1/config/genesis.json
-cp updated_genesis.json node2/config/genesis.json
-cp updated_genesis.json node3/config/genesis.json
-echo "Updated genesis file with two validators successfully shared to all nodes"
+# Add node2 to the updated genesis file
+echo "Adding node2 as a validator to genesis file"
+cat updated_genesis.json | jq --arg pubkey "$NODE2_PUBKEY" '.validators += [{"address":"","pub_key":{"type":"tendermint/PubKeyEd25519","value":$pubkey},"power":"10","name":"node2"}]' > updated_genesis2.json
+
+# Add node3 to the updated genesis file
+echo "Adding node3 as a validator to genesis file"
+cat updated_genesis2.json | jq --arg pubkey "$NODE3_PUBKEY" '.validators += [{"address":"","pub_key":{"type":"tendermint/PubKeyEd25519","value":$pubkey},"power":"10","name":"node3"}]' > updated_genesis3.json
+
+# Copy final updated genesis to all nodes
+echo "Sharing updated genesis file with all validators to all nodes"
+cp updated_genesis3.json node0/config/genesis.json
+cp updated_genesis3.json node1/config/genesis.json
+cp updated_genesis3.json node2/config/genesis.json
+cp updated_genesis3.json node3/config/genesis.json
+
+rm -rf updated_genesis*.json
 
 # Get node IDs
 echo "Getting node IDs"
